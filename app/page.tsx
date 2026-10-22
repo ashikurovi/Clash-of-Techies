@@ -14,18 +14,71 @@ export default function QuizApp() {
   const [sc, setSc] = useState(0)
   const [tm, setTm] = useState(QUIZ_CONFIG.durationSeconds)
 
+  // Check if participant already submitted previously
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("clash_of_techies_2026_submission")
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        if (parsed && parsed.submitted) {
+          setUd({ n: parsed.name, r: parsed.roll, dept: parsed.dept || "" })
+          setSc(parsed.score || 0)
+          setAns(parsed.answers || {})
+          setSt("completed")
+        }
+      }
+    } catch (e) {
+      console.error("Error reading saved submission", e)
+    }
+  }, [])
+
+  const saveSubmission = (scoreVal: number, currentAnswers: Record<number, number>) => {
+    try {
+      localStorage.setItem(
+        "clash_of_techies_2026_submission",
+        JSON.stringify({
+          submitted: true,
+          name: ud.n,
+          roll: ud.r,
+          dept: ud.dept || "",
+          score: scoreVal,
+          answers: currentAnswers,
+          submittedAt: new Date().toISOString(),
+        })
+      )
+    } catch (e) {
+      console.error("Failed to save submission locally", e)
+    }
+  }
+
   const hAuto = useCallback(() => {
     let c = 0
     questions.forEach((q) => {
       if (ans[q.id] === q.a) c++
     })
     setSc(c)
+    saveSubmission(c, ans)
     setSt("completed")
-  }, [ans])
+  }, [ans, ud])
 
   const { tabSwitchCount } = useAntiCheat(st === "quiz", hAuto)
 
   const hStart = (n: string, r: string, dept?: string) => {
+    // Check if roll or device has already submitted
+    try {
+      const saved = localStorage.getItem("clash_of_techies_2026_submission")
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        if (parsed && parsed.submitted) {
+          setUd({ n: parsed.name, r: parsed.roll, dept: parsed.dept || "" })
+          setSc(parsed.score || 0)
+          setAns(parsed.answers || {})
+          setSt("completed")
+          return
+        }
+      }
+    } catch {}
+
     setUd({ n, r, dept: dept || "" })
     setSt("quiz")
   }
@@ -46,6 +99,7 @@ export default function QuizApp() {
       if (ans[q.id] === q.a) c++
     })
     setSc(c)
+    saveSubmission(c, ans)
     setSt("completed")
   }
 
@@ -66,7 +120,12 @@ export default function QuizApp() {
 
   return (
     <main className="min-h-screen bg-background">
-      {st === "landing" && <LandingPage onStartQuiz={hStart} />}
+      {st === "landing" && (
+        <LandingPage
+          onStartQuiz={hStart}
+          onViewResult={() => setSt("completed")}
+        />
+      )}
       {st === "quiz" && (
         <QuizInterface
           userData={ud}

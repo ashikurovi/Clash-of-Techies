@@ -48,6 +48,26 @@ function doPost(e) {
       sheet.setFrozenRows(1);
     }
     
+    // Duplicate Check: একজন প্রতিযোগী কেবল একবারই সাবমিট করতে পারবেন
+    const lastRow = sheet.getLastRow();
+    if (lastRow > 1) {
+      // Column 3 (C) contains the participant Roll number
+      const existingRolls = sheet.getRange(2, 3, lastRow - 1, 1).getValues().flat().map(function(r) {
+        return String(r).trim().toLowerCase();
+      });
+      const incomingRoll = String(data.roll || '').trim().toLowerCase();
+      
+      if (incomingRoll && existingRolls.indexOf(incomingRoll) !== -1) {
+        return ContentService
+          .createTextOutput(JSON.stringify({ 
+            success: false, 
+            duplicate: true, 
+            message: 'Duplicate submission rejected: This roll has already submitted.' 
+          }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+
     // Calculate percentage
     const percentage = ((data.score / data.totalQuestions) * 100).toFixed(1) + '%';
     

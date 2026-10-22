@@ -33,8 +33,15 @@ export default function ThankYouPage({
 }: ThankYouPageProps) {
   const percentage = Math.round((score / totalQuestions) * 100)
 
-  // Send data to Google Sheets
+  // Send data to Google Sheets (Guarded: Only sends once per roll)
   useEffect(() => {
+    const sendKey = `clash_sheet_synced_${userData.r}`
+    if (typeof window !== "undefined") {
+      if (localStorage.getItem(sendKey) === "true") {
+        return
+      }
+    }
+
     const sendToGoogleSheets = async () => {
       if (!QUIZ_CONFIG.googleScriptUrl) {
         console.log("Google Script URL not configured. Data:", {
@@ -66,6 +73,9 @@ export default function ThankYouPage({
             submittedAt: new Date().toISOString(),
           }),
         })
+        if (typeof window !== "undefined") {
+          localStorage.setItem(sendKey, "true")
+        }
         console.log("Data sent to Google Sheets successfully")
       } catch (error) {
         console.error("Error sending data to Google Sheets:", error)

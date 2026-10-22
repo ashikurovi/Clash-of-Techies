@@ -29,6 +29,7 @@ import {
   Ticket,
   Lock,
   Unlock,
+  ShieldCheck,
 } from "lucide-react"
 import {
   TOPICS_DATA,
@@ -43,12 +44,34 @@ import {
 
 interface LandingPageProps {
   onStartQuiz: (name: string, roll: string, dept?: string) => void
+  onViewResult?: () => void
 }
 
-export default function LandingPage({ onStartQuiz }: LandingPageProps) {
+export default function LandingPage({ onStartQuiz, onViewResult }: LandingPageProps) {
   const [name, setName] = useState("")
   const [roll, setRoll] = useState("")
   const [dept, setDept] = useState("")
+  const [alreadySubmitted, setAlreadySubmitted] = useState<{
+    name: string
+    roll: string
+    dept?: string
+    score: number
+    submittedAt?: string
+  } | null>(null)
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("clash_of_techies_2026_submission")
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        if (parsed && parsed.submitted) {
+          setAlreadySubmitted(parsed)
+        }
+      }
+    } catch (e) {
+      console.error(e)
+    }
+  }, [])
 
   // Schedule state:
   // Phase 1: now < lockToday (Before 6 PM today) -> Form is OPEN! Countdown to 6 PM lock.
@@ -599,11 +622,15 @@ export default function LandingPage({ onStartQuiz }: LandingPageProps) {
 
               <CardHeader className="text-center pb-2 pt-6">
                 <div className={`inline-flex items-center justify-center w-14 h-14 rounded-2xl mx-auto mb-3 shadow-md ${
-                  isFormUnlocked
+                  alreadySubmitted
+                    ? "bg-purple-500/15 text-purple-600 dark:text-purple-400"
+                    : isFormUnlocked
                     ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
                     : "bg-purple-500/15 text-purple-600 dark:text-purple-400"
                 }`}>
-                  {isFormUnlocked ? (
+                  {alreadySubmitted ? (
+                    <ShieldCheck className="w-8 h-8 text-purple-500" />
+                  ) : isFormUnlocked ? (
                     <Unlock className="w-7 h-7 text-emerald-500 animate-bounce" />
                   ) : (
                     <Lock className="w-7 h-7 text-amber-500" />
@@ -612,13 +639,17 @@ export default function LandingPage({ onStartQuiz }: LandingPageProps) {
 
                 <div className="flex items-center justify-center gap-2 mb-1">
                   <span className={`text-xs font-black uppercase tracking-wider px-3 py-1 rounded-full border ${
-                    scheduleState.phase === "open_today"
+                    alreadySubmitted
+                      ? "bg-purple-500/15 text-purple-600 dark:text-purple-400 border-purple-500/30"
+                      : scheduleState.phase === "open_today"
                       ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
                       : scheduleState.phase === "locked_waiting"
                       ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30"
                       : "bg-purple-500/15 text-purple-600 dark:text-purple-400 border-purple-500/30"
                   }`}>
-                    {scheduleState.phase === "open_today"
+                    {alreadySubmitted
+                      ? "🔒 অংশগ্রহণ স্ট্যাটাস: সম্পন্ন (লক করা)"
+                      : scheduleState.phase === "open_today"
                       ? "🟢 রেজিস্ট্রেশন এখন খোলা রয়েছে (আজকে সন্ধ্যা ৬টায় লক হবে)"
                       : scheduleState.phase === "locked_waiting"
                       ? "🔒 রেজিস্ট্রেশন সাময়িকভাবে লক করা আছে"
@@ -627,12 +658,16 @@ export default function LandingPage({ onStartQuiz }: LandingPageProps) {
                 </div>
 
                 <CardTitle className="text-2xl sm:text-3xl font-black text-foreground mt-2">
-                  {scheduleState.phase === "locked_waiting"
+                  {alreadySubmitted
+                    ? "আপনি ইতিমধ্যে কুইজ সম্পন্ন করেছেন!"
+                    : scheduleState.phase === "locked_waiting"
                     ? "রেজিস্ট্রেশন শুরু হতে বাকি রয়েছে"
                     : "কুইজ রেজিস্ট্রেশন ফর্ম"}
                 </CardTitle>
                 <p className="text-xs sm:text-sm text-muted-foreground mt-1 max-w-md mx-auto">
-                  {scheduleState.phase === "open_today"
+                  {alreadySubmitted
+                    ? "প্রতিযোগিতার নিয়ম অনুযায়ী একজন শিক্ষার্থী কেবল একবারই অংশগ্রহণ করতে পারবেন। পুনরায় অংশগ্রহণ গ্রহণযোগ্য নয়।"
+                    : scheduleState.phase === "open_today"
                     ? "আজকে সন্ধ্যা ০৬:০০ টা পর্যন্ত ফর্ম উন্মুক্ত থাকবে। নাম ও রোল দিয়ে কুইজে অংশগ্রহণ করুন!"
                     : scheduleState.phase === "locked_waiting"
                     ? "আজকের প্রাথমিক সেশন শেষ হয়েছে। আগামী ২৩ অক্টোবর রাত ০৮:০০ টায় মূল কুইজ শুরু হবে।"
@@ -641,195 +676,239 @@ export default function LandingPage({ onStartQuiz }: LandingPageProps) {
               </CardHeader>
 
               <CardContent className="pt-4 pb-8">
-                {/* ⏳ Phase 1: OPEN BEFORE 6 PM TODAY - Live Notice and Closing Countdown */}
-                {scheduleState.phase === "open_today" && (
-                  <div className="mb-6 p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-purple-500/10 to-amber-500/10 border border-emerald-500/30 text-center">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <div className="flex items-center gap-2.5 text-left">
-                        <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold text-lg flex-shrink-0">
-                          ⚡
-                        </div>
-                        <div>
-                          <div className="text-xs sm:text-sm font-bold text-foreground">
-                            আজকের রেজিস্ট্রেশন সেশন উন্মুক্ত রয়েছে
+                {alreadySubmitted ? (
+                  <div className="max-w-xl mx-auto p-6 sm:p-7 rounded-2xl bg-gradient-to-br from-purple-500/10 via-card to-amber-500/10 border border-purple-500/30 text-center shadow-lg space-y-5">
+                    <div className="flex items-center justify-center gap-2 text-amber-500 font-bold text-sm">
+                      <Sparkles className="w-4 h-4" />
+                      <span>আপনার কুইজ সাবমিশন সফলভাবে গৃহীত হয়েছে</span>
+                    </div>
+
+                    {/* Participant Summary Box */}
+                    <div className="p-4 rounded-xl bg-secondary/80 border border-border text-left grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+                      <div>
+                        <span className="text-muted-foreground block text-[11px]">শিক্ষার্থীর নাম:</span>
+                        <strong className="text-foreground text-sm font-bold truncate block">{alreadySubmitted.name}</strong>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground block text-[11px]">রোল নম্বর:</span>
+                        <strong className="text-foreground text-sm font-bold block">{alreadySubmitted.roll}</strong>
+                      </div>
+                      <div className="col-span-2 sm:col-span-1">
+                        <span className="text-muted-foreground block text-[11px]">প্রাপ্ত স্কোর:</span>
+                        <strong className="text-purple-600 dark:text-purple-400 text-sm font-black block">
+                          {alreadySubmitted.score} / {QUIZ_CONFIG.totalQuestions}
+                        </strong>
+                      </div>
+                    </div>
+
+                    <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs text-amber-700 dark:text-amber-300">
+                      ⚠️ আপনার ফলাফল ও স্কোর অফিসিয়াল ডাটাবেসে সেভ করা আছে। মেধা তালিকা ও বিজয়ীদের নাম পরবর্তীতে ঘোষণা করা হবে।
+                    </div>
+
+                    {onViewResult && (
+                      <Button
+                        type="button"
+                        onClick={onViewResult}
+                        className="w-full h-13 bg-gradient-to-r from-purple-600 via-violet-600 to-amber-500 hover:from-purple-700 hover:to-amber-600 text-white font-extrabold text-base rounded-xl shadow-lg transition-all"
+                      >
+                        <span>আপনার রেজাল্ট ও সামারি দেখুন</span>
+                        <Sparkles className="w-4 h-4 ml-2" />
+                      </Button>
+                    )}
+                  </div>
+                ) : (
+                  <>
+                    {/* ⏳ Phase 1: OPEN BEFORE 6 PM TODAY - Live Notice and Closing Countdown */}
+                    {scheduleState.phase === "open_today" && (
+                      <div className="mb-6 p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-purple-500/10 to-amber-500/10 border border-emerald-500/30 text-center">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <div className="flex items-center gap-2.5 text-left">
+                            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold text-lg flex-shrink-0">
+                              ⚡
+                            </div>
+                            <div>
+                              <div className="text-xs sm:text-sm font-bold text-foreground">
+                                আজকের রেজিস্ট্রেশন সেশন উন্মুক্ত রয়েছে
+                              </div>
+                              <p className="text-[11px] text-muted-foreground">
+                                আজকে সন্ধ্যা ০৬:০০ টায় ফর্ম স্বয়ংক্রিয়ভাবে লক হয়ে যাবে
+                              </p>
+                            </div>
                           </div>
-                          <p className="text-[11px] text-muted-foreground">
-                            আজকে সন্ধ্যা ০৬:০০ টায় ফর্ম স্বয়ংক্রিয়ভাবে লক হয়ে যাবে
-                          </p>
+
+                          <div className="flex items-center gap-2 bg-card/90 px-4 py-2 rounded-xl border border-border shadow-sm">
+                            <Clock className="w-4 h-4 text-amber-500 animate-spin" />
+                            <span className="text-xs text-muted-foreground font-semibold">আজকের সেশন শেষ হতে বাকি:</span>
+                            <span className="font-mono font-black text-sm sm:text-base text-amber-600 dark:text-amber-400">
+                              {String(scheduleState.hours).padStart(2, "0")}:{String(scheduleState.minutes).padStart(2, "0")}:{String(scheduleState.seconds).padStart(2, "0")}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ⏳ Phase 2: LOCKED BETWEEN 6 PM TODAY & 8 PM TOMORROW - Countdown to 23 Oct 8pm */}
+                    {scheduleState.phase === "locked_waiting" && !devOverride && (
+                      <div className="mb-8 p-5 sm:p-7 rounded-3xl bg-gradient-to-b from-purple-950/70 via-slate-950/90 to-purple-950/70 border border-purple-500/40 text-center relative overflow-hidden shadow-2xl">
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 text-xs font-bold mb-4 border border-amber-500/30">
+                          <Clock className="w-3.5 h-3.5 animate-spin" />
+                          ২৩ অক্টোবর রাত ৮:০০ টায় লাইভ কুইজ
+                        </div>
+
+                        <div className="grid grid-cols-4 gap-2 sm:gap-4 max-w-md mx-auto">
+                          {/* Days */}
+                          <div className="p-3 sm:p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm text-center">
+                            <div className="text-2xl sm:text-4xl md:text-5xl font-black text-amber-400 font-mono tracking-tight">
+                              {String(scheduleState.days).padStart(2, "0")}
+                            </div>
+                            <div className="text-[10px] sm:text-xs uppercase tracking-wider text-slate-300 font-bold mt-1">
+                              দিন (Days)
+                            </div>
+                          </div>
+
+                          {/* Hours */}
+                          <div className="p-3 sm:p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm text-center">
+                            <div className="text-2xl sm:text-4xl md:text-5xl font-black text-purple-300 font-mono tracking-tight">
+                              {String(scheduleState.hours).padStart(2, "0")}
+                            </div>
+                            <div className="text-[10px] sm:text-xs uppercase tracking-wider text-slate-300 font-bold mt-1">
+                              ঘণ্টা (Hrs)
+                            </div>
+                          </div>
+
+                          {/* Minutes */}
+                          <div className="p-3 sm:p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm text-center">
+                            <div className="text-2xl sm:text-4xl md:text-5xl font-black text-violet-300 font-mono tracking-tight">
+                              {String(scheduleState.minutes).padStart(2, "0")}
+                            </div>
+                            <div className="text-[10px] sm:text-xs uppercase tracking-wider text-slate-300 font-bold mt-1">
+                              মিনিট (Mins)
+                            </div>
+                          </div>
+
+                          {/* Seconds */}
+                          <div className="p-3 sm:p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm text-center">
+                            <div className="text-2xl sm:text-4xl md:text-5xl font-black text-rose-400 font-mono tracking-tight">
+                              {String(scheduleState.seconds).padStart(2, "0")}
+                            </div>
+                            <div className="text-[10px] sm:text-xs uppercase tracking-wider text-slate-300 font-bold mt-1">
+                              সেকেন্ড (Sec)
+                            </div>
+                          </div>
+                        </div>
+
+                        <p className="text-xs text-slate-300 mt-4 max-w-sm mx-auto">
+                          ২৩ অক্টোবর রাত ০৮:০০ টায় নির্ধারিত সময়ে স্বয়ংক্রিয়ভাবে মূল কুইজ উন্মুক্ত হবে।
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Form Elements */}
+                    <form onSubmit={handleSubmit} className="space-y-5 max-w-xl mx-auto">
+                      <div className="space-y-2">
+                        <Label htmlFor="name" className="text-sm font-semibold text-foreground flex items-center justify-between">
+                          <span>আপনার পূর্ণ নাম <span className="text-destructive">*</span></span>
+                          {!isFormUnlocked && (
+                            <span className="text-xs text-muted-foreground flex items-center gap-1">
+                              <Lock className="w-3 h-3 text-amber-500" /> ২৩ অক্টোবর রাত ৮টায় খুলবে
+                            </span>
+                          )}
+                        </Label>
+                        <Input
+                          id="name"
+                          type="text"
+                          placeholder={isFormUnlocked ? "যেমন: মোঃ সাব্বির আহমেদ" : "রেজিস্ট্রেশন লক করা রয়েছে..."}
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
+                          disabled={!isFormUnlocked}
+                          className="h-12 bg-background border-border text-base focus-visible:ring-purple-500 disabled:opacity-60 disabled:cursor-not-allowed"
+                          required
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="roll" className="text-sm font-semibold text-foreground flex items-center justify-between">
+                            <span>রোল নম্বর <span className="text-destructive">*</span></span>
+                            {!isFormUnlocked && (
+                              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                <Lock className="w-3 h-3 text-amber-500" /> লক করা
+                              </span>
+                            )}
+                          </Label>
+                          <Input
+                            id="roll"
+                            type="text"
+                            placeholder={isFormUnlocked ? "যেমন: 589412" : "পলিটেকনিক রোল..."}
+                            value={roll}
+                            onChange={(e) => setRoll(e.target.value)}
+                            disabled={!isFormUnlocked}
+                            className="h-12 bg-background border-border text-base focus-visible:ring-purple-500 disabled:opacity-60 disabled:cursor-not-allowed"
+                            required
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="dept" className="text-sm font-semibold text-foreground">
+                            ইনস্টিটিউট / ডিপার্টমেন্ট <span className="text-muted-foreground text-xs">(ঐচ্ছিক)</span>
+                          </Label>
+                          <Input
+                            id="dept"
+                            type="text"
+                            placeholder={isFormUnlocked ? "যেমন: CPI - Computer" : "ইনস্টিটিউট নাম..."}
+                            value={dept}
+                            onChange={(e) => setDept(e.target.value)}
+                            disabled={!isFormUnlocked}
+                            className="h-12 bg-background border-border text-base focus-visible:ring-purple-500 disabled:opacity-60 disabled:cursor-not-allowed"
+                          />
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2 bg-card/90 px-4 py-2 rounded-xl border border-border shadow-sm">
-                        <Clock className="w-4 h-4 text-amber-500 animate-spin" />
-                        <span className="text-xs text-muted-foreground font-semibold">আজকের সেশন শেষ হতে বাকি:</span>
-                        <span className="font-mono font-black text-sm sm:text-base text-amber-600 dark:text-amber-400">
-                          {String(scheduleState.hours).padStart(2, "0")}:{String(scheduleState.minutes).padStart(2, "0")}:{String(scheduleState.seconds).padStart(2, "0")}
+                      <div className={`p-3.5 rounded-xl text-xs flex items-start gap-2.5 border ${
+                        isFormUnlocked
+                          ? "bg-amber-500/10 border-amber-500/20 text-amber-800 dark:text-amber-300"
+                          : "bg-secondary border-border text-muted-foreground"
+                      }`}>
+                        <Clock className="w-4 h-4 flex-shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
+                        <span>
+                          {isFormUnlocked
+                            ? "কুইজ শুরু করার সাথে সাথে ২০ মিনিটের টাইমার শুরু হবে। উত্তর নির্বাচন করার সাথে সাথেই তা লক হয়ে যাবে।"
+                            : "কুইজের সময়সীমা ২০ মিনিট। ২৩ অক্টোবর রাত ৮:০০ টায় নির্ধারিত সময়ে অংশগ্রহণ নিশ্চিত করুন।"}
                         </span>
                       </div>
-                    </div>
-                  </div>
-                )}
 
-                {/* ⏳ Phase 2: LOCKED BETWEEN 6 PM TODAY & 8 PM TOMORROW - Countdown to 23 Oct 8pm */}
-                {scheduleState.phase === "locked_waiting" && !devOverride && (
-                  <div className="mb-8 p-5 sm:p-7 rounded-3xl bg-gradient-to-b from-purple-950/70 via-slate-950/90 to-purple-950/70 border border-purple-500/40 text-center relative overflow-hidden shadow-2xl">
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 text-xs font-bold mb-4 border border-amber-500/30">
-                      <Clock className="w-3.5 h-3.5 animate-spin" />
-                      ২৩ অক্টোবর রাত ৮:০০ টায় লাইভ কুইজ
-                    </div>
-
-                    <div className="grid grid-cols-4 gap-2 sm:gap-4 max-w-md mx-auto">
-                      {/* Days */}
-                      <div className="p-3 sm:p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm text-center">
-                        <div className="text-2xl sm:text-4xl md:text-5xl font-black text-amber-400 font-mono tracking-tight">
-                          {String(scheduleState.days).padStart(2, "0")}
-                        </div>
-                        <div className="text-[10px] sm:text-xs uppercase tracking-wider text-slate-300 font-bold mt-1">
-                          দিন (Days)
-                        </div>
-                      </div>
-
-                      {/* Hours */}
-                      <div className="p-3 sm:p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm text-center">
-                        <div className="text-2xl sm:text-4xl md:text-5xl font-black text-purple-300 font-mono tracking-tight">
-                          {String(scheduleState.hours).padStart(2, "0")}
-                        </div>
-                        <div className="text-[10px] sm:text-xs uppercase tracking-wider text-slate-300 font-bold mt-1">
-                          ঘণ্টা (Hrs)
-                        </div>
-                      </div>
-
-                      {/* Minutes */}
-                      <div className="p-3 sm:p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm text-center">
-                        <div className="text-2xl sm:text-4xl md:text-5xl font-black text-violet-300 font-mono tracking-tight">
-                          {String(scheduleState.minutes).padStart(2, "0")}
-                        </div>
-                        <div className="text-[10px] sm:text-xs uppercase tracking-wider text-slate-300 font-bold mt-1">
-                          মিনিট (Mins)
-                        </div>
-                      </div>
-
-                      {/* Seconds */}
-                      <div className="p-3 sm:p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm text-center">
-                        <div className="text-2xl sm:text-4xl md:text-5xl font-black text-rose-400 font-mono tracking-tight">
-                          {String(scheduleState.seconds).padStart(2, "0")}
-                        </div>
-                        <div className="text-[10px] sm:text-xs uppercase tracking-wider text-slate-300 font-bold mt-1">
-                          সেকেন্ড (Sec)
-                        </div>
-                      </div>
-                    </div>
-
-                    <p className="text-xs text-slate-300 mt-4 max-w-sm mx-auto">
-                      ২৩ অক্টোবর রাত ০৮:০০ টায় নির্ধারিত সময়ে স্বয়ংক্রিয়ভাবে মূল কুইজ উন্মুক্ত হবে।
-                    </p>
-                  </div>
-                )}
-
-                {/* Form Elements */}
-                <form onSubmit={handleSubmit} className="space-y-5 max-w-xl mx-auto">
-                  <div className="space-y-2">
-                    <Label htmlFor="name" className="text-sm font-semibold text-foreground flex items-center justify-between">
-                      <span>আপনার পূর্ণ নাম <span className="text-destructive">*</span></span>
-                      {!isFormUnlocked && (
-                        <span className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Lock className="w-3 h-3 text-amber-500" /> ২৩ অক্টোবর রাত ৮টায় খুলবে
-                        </span>
+                      {/* Submit / Action Button */}
+                      {isFormUnlocked ? (
+                        <Button
+                          type="submit"
+                          disabled={!isFormValid}
+                          className="w-full h-14 bg-gradient-to-r from-purple-600 via-violet-600 to-amber-500 hover:from-purple-700 hover:to-amber-600 text-white font-black text-lg rounded-xl shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed group"
+                        >
+                          <span>কুইজ শুরু করুন</span>
+                          <Zap className="w-5 h-5 ml-2 group-hover:scale-125 transition-transform" />
+                        </Button>
+                      ) : (
+                        <Button
+                          type="button"
+                          disabled
+                          className="w-full h-14 bg-secondary text-muted-foreground font-bold text-base rounded-xl cursor-not-allowed opacity-80 border border-border flex items-center justify-center gap-2"
+                        >
+                          <Lock className="w-4 h-4 text-amber-500" />
+                          <span>রেজিস্ট্রেশন লক করা আছে (২৩ অক্টোবর রাত ৮:০০ টায় খুলবে)</span>
+                        </Button>
                       )}
-                    </Label>
-                    <Input
-                      id="name"
-                      type="text"
-                      placeholder={isFormUnlocked ? "যেমন: মোঃ সাব্বির আহমেদ" : "রেজিস্ট্রেশন লক করা রয়েছে..."}
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      disabled={!isFormUnlocked}
-                      className="h-12 bg-background border-border text-base focus-visible:ring-purple-500 disabled:opacity-60 disabled:cursor-not-allowed"
-                      required
-                    />
-                  </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="roll" className="text-sm font-semibold text-foreground flex items-center justify-between">
-                        <span>রোল নম্বর <span className="text-destructive">*</span></span>
-                        {!isFormUnlocked && (
-                          <span className="text-xs text-muted-foreground flex items-center gap-1">
-                            <Lock className="w-3 h-3 text-amber-500" /> লক করা
+                      {/* Dev / Admin Test Override Note */}
+                      {devOverride && (
+                        <div className="text-center pt-2">
+                          <span className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/30">
+                            ⚡ Developer Test Mode Enabled (Unlocked)
                           </span>
-                        )}
-                      </Label>
-                      <Input
-                        id="roll"
-                        type="text"
-                        placeholder={isFormUnlocked ? "যেমন: 589412" : "পলিটেকনিক রোল..."}
-                        value={roll}
-                        onChange={(e) => setRoll(e.target.value)}
-                        disabled={!isFormUnlocked}
-                        className="h-12 bg-background border-border text-base focus-visible:ring-purple-500 disabled:opacity-60 disabled:cursor-not-allowed"
-                        required
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="dept" className="text-sm font-semibold text-foreground">
-                        ইনস্টিটিউট / ডিপার্টমেন্ট <span className="text-muted-foreground text-xs">(ঐচ্ছিক)</span>
-                      </Label>
-                      <Input
-                        id="dept"
-                        type="text"
-                        placeholder={isFormUnlocked ? "যেমন: CPI - Computer" : "ইনস্টিটিউট নাম..."}
-                        value={dept}
-                        onChange={(e) => setDept(e.target.value)}
-                        disabled={!isFormUnlocked}
-                        className="h-12 bg-background border-border text-base focus-visible:ring-purple-500 disabled:opacity-60 disabled:cursor-not-allowed"
-                      />
-                    </div>
-                  </div>
-
-                  <div className={`p-3.5 rounded-xl text-xs flex items-start gap-2.5 border ${
-                    isFormUnlocked
-                      ? "bg-amber-500/10 border-amber-500/20 text-amber-800 dark:text-amber-300"
-                      : "bg-secondary border-border text-muted-foreground"
-                  }`}>
-                    <Clock className="w-4 h-4 flex-shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
-                    <span>
-                      {isFormUnlocked
-                        ? "কুইজ শুরু করার সাথে সাথে ২০ মিনিটের টাইমার শুরু হবে। উত্তর নির্বাচন করার সাথে সাথেই তা লক হয়ে যাবে।"
-                        : "কুইজের সময়সীমা ২০ মিনিট। ২৩ অক্টোবর রাত ৮:০০ টায় নির্ধারিত সময়ে অংশগ্রহণ নিশ্চিত করুন।"}
-                    </span>
-                  </div>
-
-                  {/* Submit / Action Button */}
-                  {isFormUnlocked ? (
-                    <Button
-                      type="submit"
-                      disabled={!isFormValid}
-                      className="w-full h-14 bg-gradient-to-r from-purple-600 via-violet-600 to-amber-500 hover:from-purple-700 hover:to-amber-600 text-white font-black text-lg rounded-xl shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed group"
-                    >
-                      <span>কুইজ শুরু করুন</span>
-                      <Zap className="w-5 h-5 ml-2 group-hover:scale-125 transition-transform" />
-                    </Button>
-                  ) : (
-                    <Button
-                      type="button"
-                      disabled
-                      className="w-full h-14 bg-secondary text-muted-foreground font-bold text-base rounded-xl cursor-not-allowed opacity-80 border border-border flex items-center justify-center gap-2"
-                    >
-                      <Lock className="w-4 h-4 text-amber-500" />
-                      <span>রেজিস্ট্রেশন লক করা আছে (২৩ অক্টোবর রাত ৮:০০ টায় খুলবে)</span>
-                    </Button>
-                  )}
-
-                  {/* Dev / Admin Test Override Note */}
-                  {devOverride && (
-                    <div className="text-center pt-2">
-                      <span className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/30">
-                        ⚡ Developer Test Mode Enabled (Unlocked)
-                      </span>
-                    </div>
-                  )}
-                </form>
+                        </div>
+                      )}
+                    </form>
+                  </>
+                )}
               </CardContent>
             </Card>
           </section>
