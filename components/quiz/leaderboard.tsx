@@ -12,27 +12,27 @@ import {
   Search,
   Sparkles,
   Zap,
-  Clock,
   BatteryCharging,
   Headphones,
-  CheckCircle2,
   Users,
-  ShieldCheck,
   TrendingUp,
-  AlertCircle
+  AlertCircle,
+  HelpCircle,
+  ArrowRight,
+  Database
 } from "lucide-react"
-import { QUIZ_CONFIG, LeaderboardEntry, INITIAL_LEADERBOARD } from "@/lib/quiz-data"
+import { QUIZ_CONFIG, LeaderboardEntry } from "@/lib/quiz-data"
 
 interface LeaderboardProps {
   userRoll?: string
 }
 
 export default function Leaderboard({ userRoll }: LeaderboardProps) {
-  const [data, setData] = useState<LeaderboardEntry[]>(INITIAL_LEADERBOARD)
-  const [loading, setLoading] = useState(false)
+  const [data, setData] = useState<LeaderboardEntry[]>([])
+  const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState("")
   const [lastUpdated, setLastUpdated] = useState<string>("")
-  const [isLiveFromSheet, setIsLiveFromSheet] = useState(false)
+  const [isDoGetMissing, setIsDoGetMissing] = useState(false)
   const [mySubmission, setMySubmission] = useState<{
     name: string
     roll: string
@@ -56,13 +56,12 @@ export default function Leaderboard({ userRoll }: LeaderboardProps) {
     } catch {}
   }, [])
 
-  // Fetch live leaderboard from Google Apps Script
-  const fetchLeaderboard = async (isManual = false) => {
-    if (!QUIZ_CONFIG.googleScriptUrl) return
+  // Fetch live leaderboard from Google Sheets via Next.js server route
+  const fetchLeaderboard = async () => {
     setLoading(true)
 
     try {
-      const res = await fetch(QUIZ_CONFIG.googleScriptUrl, {
+      const res = await fetch("/api/leaderboard", {
         method: "GET",
         headers: {
           Accept: "application/json",
@@ -72,29 +71,34 @@ export default function Leaderboard({ userRoll }: LeaderboardProps) {
 
       if (res.ok) {
         const json = await res.json()
-        if (json && json.status === "ok" && Array.isArray(json.leaderboard) && json.leaderboard.length > 0) {
+        if (json.isDoGetMissing) {
+          setIsDoGetMissing(true)
+          setData([])
+        } else if (Array.isArray(json.leaderboard)) {
+          setIsDoGetMissing(false)
           setData(json.leaderboard)
-          setIsLiveFromSheet(true)
-          setLastUpdated(new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit" }))
-        } else {
-          // If empty sheet, retain demo with indicator
-          setIsLiveFromSheet(false)
+          setLastUpdated(
+            new Date().toLocaleTimeString("en-US", {
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+            })
+          )
         }
       }
     } catch (err) {
-      console.log("Could not fetch live leaderboard from Google Sheets. Using initial data.", err)
-      setIsLiveFromSheet(false)
+      console.error("Could not fetch live leaderboard from Google Sheets.", err)
     } finally {
       setLoading(false)
     }
   }
 
-  // Initial fetch on mount & auto-poll every 45s
+  // Initial fetch on mount & auto-poll every 30s
   useEffect(() => {
     fetchLeaderboard()
     const interval = setInterval(() => {
       fetchLeaderboard()
-    }, 45000)
+    }, 30000)
     return () => clearInterval(interval)
   }, [])
 
@@ -137,10 +141,10 @@ export default function Leaderboard({ userRoll }: LeaderboardProps) {
       <div className="max-w-5xl mx-auto space-y-8">
         {/* Header Section */}
         <div className="text-center space-y-3">
-          <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-xs font-black uppercase tracking-wider shadow-sm">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-xs font-black uppercase tracking-wider shadow-sm">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-            <Trophy className="w-3.5 h-3.5" />
-            <span>লাইভ লিডারবোর্ড • Live Ranking</span>
+            <Trophy className="w-4 h-4 text-amber-500" />
+            <span>গুগল শিট লাইভ লিডারবোর্ড • Live Sheet Rankings</span>
           </div>
 
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-foreground">
@@ -148,7 +152,7 @@ export default function Leaderboard({ userRoll }: LeaderboardProps) {
           </h2>
 
           <p className="text-sm md:text-base text-muted-foreground max-w-2xl mx-auto">
-            সর্বোচ্চ সঠিক উত্তর ও দ্রুততম সময়ের ভিত্তিতে প্রতিযোগীদের অবস্থান স্বয়ংক্রিয়ভাবে হালনাগাদ হচ্ছে
+            গুগল শিটের সকল সাবমিশনের ভিত্তিতে প্রতিযোগীদের স্কোর ও অবস্থান সরাসরি প্রদর্শিত হচ্ছে
           </p>
         </div>
 
@@ -156,15 +160,15 @@ export default function Leaderboard({ userRoll }: LeaderboardProps) {
         <div className="p-4 rounded-2xl bg-card border border-border/80 shadow-md flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2 text-xs font-bold px-3 py-1.5 rounded-xl bg-secondary/80 border border-border">
-              <span className={`w-2 h-2 rounded-full ${isLiveFromSheet ? "bg-emerald-500 animate-pulse" : "bg-purple-500"}`} />
+              <Database className="w-3.5 h-3.5 text-purple-500" />
               <span className="text-foreground">
-                {isLiveFromSheet ? "গুগল শিট থেকে লাইভ সিঙ্কড" : "স্ট্যান্ডবাই / প্রিভিউ মোড"}
+                গুগল শিট সোর্স
               </span>
             </div>
 
-            <div className="text-xs text-muted-foreground hidden sm:flex items-center gap-1.5 font-medium">
-              <Users className="w-3.5 h-3.5 text-purple-500" />
-              <span>মোট প্রতিযোগী: <strong className="text-foreground">{data.length} জন</strong></span>
+            <div className="text-xs text-muted-foreground flex items-center gap-1.5 font-medium">
+              <Users className="w-3.5 h-3.5 text-amber-500" />
+              <span>মোট অংশগ্রহণকারী: <strong className="text-foreground">{data.length} জন</strong></span>
             </div>
           </div>
 
@@ -177,7 +181,8 @@ export default function Leaderboard({ userRoll }: LeaderboardProps) {
                 placeholder="নাম বা রোল খুঁজুন..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-9 h-10 text-xs sm:text-sm bg-background border-border rounded-xl focus-visible:ring-purple-500"
+                disabled={data.length === 0}
+                className="pl-9 h-10 text-xs sm:text-sm bg-background border-border rounded-xl focus-visible:ring-purple-500 disabled:opacity-50"
               />
             </div>
 
@@ -185,7 +190,7 @@ export default function Leaderboard({ userRoll }: LeaderboardProps) {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => fetchLeaderboard(true)}
+              onClick={fetchLeaderboard}
               disabled={loading}
               className="h-10 px-3.5 rounded-xl border-border bg-background hover:bg-secondary flex items-center gap-2 text-xs font-bold"
             >
@@ -229,9 +234,87 @@ export default function Leaderboard({ userRoll }: LeaderboardProps) {
           </div>
         )}
 
-        {/* 🏆 Top 3 Podium Showcase (Displayed when no active search) */}
+        {/* ⚠️ Notice if Google Apps Script needs New Version deployment */}
+        {isDoGetMissing && (
+          <div className="p-6 rounded-3xl bg-amber-500/10 border-2 border-amber-500/30 text-amber-900 dark:text-amber-200 space-y-4">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-6 h-6 text-amber-500 flex-shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <h4 className="text-base font-bold text-foreground">
+                  গুগল শিট থেকে লাইভ লিডারবোর্ড চালু করতে Apps Script New Version ডিপ্লয় করুন:
+                </h4>
+                <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+                  আপনার Google Apps Script Web App-এ লিডারবোর্ড API রিড ফাংশন (<code className="bg-amber-500/20 px-1 py-0.5 rounded font-mono text-xs">doGet</code>) এখনও পাবলিশ করা হয়নি। নিচের ধাপগুলো অনুসরণ করুন:
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs pt-1">
+              <div className="p-3 rounded-xl bg-background/80 border border-border">
+                <div className="font-bold text-foreground mb-1">১. কোড সেভ করুন</div>
+                <p className="text-muted-foreground">গুগল শিটে <span className="font-semibold text-foreground">Extensions &gt; Apps Script</span> ওপেন করে প্রজেক্টের <code className="text-purple-500 font-mono">scripts/google-apps-script.js</code> ফাইলটির কোড পেস্ট করে Ctrl+S চাপুন।</p>
+              </div>
+              <div className="p-3 rounded-xl bg-background/80 border border-border">
+                <div className="font-bold text-foreground mb-1">২. New Version দিন</div>
+                <p className="text-muted-foreground">উপরে <span className="font-semibold text-foreground">Deploy &gt; Manage deployments</span>-এ ক্লিক করুন &gt; পেনসিল আইকনে চাপুন &gt; Version ড্রপডাউনে <span className="text-emerald-500 font-bold">New version</span> সিলেক্ট করুন।</p>
+              </div>
+              <div className="p-3 rounded-xl bg-background/80 border border-border">
+                <div className="font-bold text-foreground mb-1">৩. Deploy চাপুন</div>
+                <p className="text-muted-foreground">নিচে <span className="font-semibold text-foreground">Deploy</span> বাটনে ক্লিক করলেই গুগল শিট থেকে সকল ডাটা লাইভ লোড হওয়া শুরু করবে!</p>
+              </div>
+            </div>
+
+            <div className="text-center pt-1">
+              <Button
+                size="sm"
+                onClick={fetchLeaderboard}
+                disabled={loading}
+                className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs rounded-xl"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${loading ? "animate-spin" : ""}`} />
+                <span>ডিপ্লয় করার পর এখানে ক্লিক করে চেক করুন</span>
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Loading State Skeleton */}
+        {loading && data.length === 0 && (
+          <div className="p-12 text-center space-y-4 rounded-3xl bg-card border border-border">
+            <RefreshCw className="w-8 h-8 text-amber-500 animate-spin mx-auto" />
+            <p className="text-sm font-bold text-foreground">গুগল শিট থেকে লাইভ লিডারবোর্ড ডাটা লোড হচ্ছে...</p>
+            <p className="text-xs text-muted-foreground">দয়া করে কিছুক্ষণ অপেক্ষা করুন</p>
+          </div>
+        )}
+
+        {/* Empty Sheet State (When Google Sheet has 0 rows and doGet is active) */}
+        {!loading && !isDoGetMissing && data.length === 0 && (
+          <div className="p-10 sm:p-14 text-center space-y-4 rounded-3xl bg-card border border-dashed border-border/80 shadow-md">
+            <div className="w-16 h-16 rounded-2xl bg-purple-500/10 text-purple-500 flex items-center justify-center mx-auto text-3xl">
+              📊
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-xl sm:text-2xl font-black text-foreground">
+                এখনও পর্যন্ত কোনো প্রতিযোগী সাবমিট করেনি
+              </h3>
+              <p className="text-xs sm:text-sm text-muted-foreground max-w-md mx-auto">
+                আপনার গুগল শিটটি প্রস্তুত রয়েছে। প্রথম প্রতিযোগী হিসেবে কুইজে অংশ নিন এবং সরাসরি লিডারবোর্ডের ১ম স্থান অর্জন করুন!
+              </p>
+            </div>
+            <div className="pt-2">
+              <a href="#register">
+                <Button className="h-12 px-6 bg-gradient-to-r from-purple-600 to-amber-500 hover:from-purple-700 hover:to-amber-600 text-white font-black text-sm rounded-xl shadow-lg">
+                  <span>প্রথম প্রতিযোগী হিসেবে কুইজ দিন</span>
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+              </a>
+            </div>
+          </div>
+        )}
+
+        {/* 🏆 Top 3 Podium Showcase (Displayed only when real data exists) */}
         {!search.trim() && top1 && (
-          <div className="pt-6">
+          <div className="pt-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-end">
               {/* 🥈 2nd Place: 1st Runner-up */}
               {top2 && (
@@ -357,119 +440,123 @@ export default function Leaderboard({ userRoll }: LeaderboardProps) {
           </div>
         )}
 
-        {/* 📜 Leaderboard Table (Rank 4 onward or search results) */}
-        <Card className="border-border/80 shadow-xl bg-card overflow-hidden">
-          <CardHeader className="pb-3 border-b border-border/60 bg-muted/30">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base sm:text-lg font-bold text-foreground flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-purple-500" />
-                <span>
-                  {search.trim() ? "অনুসন্ধানের ফলাফল" : "পরবর্তী সেরা প্রতিযোগী তালিকা"}
+        {/* 📜 Leaderboard Table (When real data exists) */}
+        {data.length > 0 && (
+          <Card className="border-border/80 shadow-xl bg-card overflow-hidden">
+            <CardHeader className="pb-3 border-b border-border/60 bg-muted/30">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base sm:text-lg font-bold text-foreground flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-purple-500" />
+                  <span>
+                    {search.trim() ? "অনুসন্ধানের ফলাফল" : "প্রতিযোগীদের সম্পূর্ণ মেধা তালিকা"}
+                  </span>
+                </CardTitle>
+                <span className="text-xs text-muted-foreground font-medium">
+                  {others.length} জন প্রতিযোগী প্রদর্শিত
                 </span>
-              </CardTitle>
-              <span className="text-xs text-muted-foreground font-medium">
-                {others.length} জন প্রতিযোগী প্রদর্শিত
-              </span>
-            </div>
-          </CardHeader>
-
-          <CardContent className="p-0">
-            {others.length === 0 ? (
-              <div className="p-12 text-center space-y-3">
-                <AlertCircle className="w-10 h-10 text-muted-foreground mx-auto opacity-50" />
-                <p className="text-sm font-semibold text-foreground">কোনো প্রতিযোগী পাওয়া যায়নি</p>
-                <p className="text-xs text-muted-foreground">ভিন্ন নাম বা রোল দিয়ে অনুসন্ধান করে দেখুন।</p>
               </div>
-            ) : (
-              <div className="divide-y divide-border/60">
-                {others.map((item, idx) => {
-                  const rank = search.trim()
-                    ? data.findIndex((d) => d.id === item.id) + 1
-                    : idx + 4
+            </CardHeader>
 
-                  const isCurrentUser =
-                    mySubmission &&
-                    ((item.rawRoll && item.rawRoll.toLowerCase() === mySubmission.roll.toLowerCase()) ||
-                      item.roll.toLowerCase() === mySubmission.roll.toLowerCase())
+            <CardContent className="p-0">
+              {others.length === 0 ? (
+                <div className="p-10 text-center space-y-2">
+                  <AlertCircle className="w-8 h-8 text-muted-foreground mx-auto opacity-50" />
+                  <p className="text-sm font-semibold text-foreground">কোনো প্রতিযোগী পাওয়া যায়নি</p>
+                  <p className="text-xs text-muted-foreground">ভিন্ন নাম বা রোল দিয়ে অনুসন্ধান করে দেখুন।</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-border/60">
+                  {others.map((item, idx) => {
+                    const rank = search.trim()
+                      ? data.findIndex((d) => d.id === item.id) + 1
+                      : idx + 4
 
-                  return (
-                    <div
-                      key={item.id || idx}
-                      className={`p-3.5 sm:p-4 flex items-center justify-between gap-3 transition-colors ${
-                        isCurrentUser
-                          ? "bg-purple-500/15 border-l-4 border-l-purple-500 font-semibold"
-                          : "hover:bg-muted/40"
-                      }`}
-                    >
-                      {/* Rank & User Info */}
-                      <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-                        <div
-                          className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs flex-shrink-0 ${
-                            rank <= 3
-                              ? "bg-amber-500 text-slate-950"
-                              : rank <= 10
-                              ? "bg-purple-500/20 text-purple-600 dark:text-purple-400 font-extrabold"
-                              : "bg-secondary text-muted-foreground"
-                          }`}
-                        >
-                          #{rank}
-                        </div>
+                    const isCurrentUser =
+                      mySubmission &&
+                      ((item.rawRoll && item.rawRoll.toLowerCase() === mySubmission.roll.toLowerCase()) ||
+                        item.roll.toLowerCase() === mySubmission.roll.toLowerCase())
 
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm sm:text-base font-bold text-foreground truncate block">
-                              {item.name}
-                            </span>
-                            {isCurrentUser && (
-                              <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-purple-600 text-white shadow-sm flex-shrink-0">
-                                আপনি
+                    return (
+                      <div
+                        key={item.id || idx}
+                        className={`p-3.5 sm:p-4 flex items-center justify-between gap-3 transition-colors ${
+                          isCurrentUser
+                            ? "bg-purple-500/15 border-l-4 border-l-purple-500 font-semibold"
+                            : "hover:bg-muted/40"
+                        }`}
+                      >
+                        {/* Rank & User Info */}
+                        <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                          <div
+                            className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs flex-shrink-0 ${
+                              rank <= 3
+                                ? "bg-amber-500 text-slate-950"
+                                : rank <= 10
+                                ? "bg-purple-500/20 text-purple-600 dark:text-purple-400 font-extrabold"
+                                : "bg-secondary text-muted-foreground"
+                            }`}
+                          >
+                            #{rank}
+                          </div>
+
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm sm:text-base font-bold text-foreground truncate block">
+                                {item.name}
                               </span>
-                            )}
-                          </div>
-                          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground mt-0.5">
-                            <span className="font-mono font-medium">রোল: {item.roll}</span>
-                            <span>•</span>
-                            <span className="truncate">{item.dept}</span>
+                              {isCurrentUser && (
+                                <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-purple-600 text-white shadow-sm flex-shrink-0">
+                                  আপনি
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                              <span className="font-mono font-medium">রোল: {item.roll}</span>
+                              <span>•</span>
+                              <span className="truncate">{item.dept}</span>
+                            </div>
                           </div>
                         </div>
-                      </div>
 
-                      {/* Score & Progress */}
-                      <div className="flex items-center gap-4 flex-shrink-0 text-right">
-                        <div>
-                          <div className="text-base sm:text-lg font-black text-foreground">
-                            {item.score}{" "}
-                            <span className="text-[11px] text-muted-foreground font-normal">
-                              / {item.totalQuestions}
-                            </span>
-                          </div>
-                          <div className="text-[11px] font-bold text-emerald-500">
-                            {item.percentage}
+                        {/* Score & Percentage */}
+                        <div className="flex items-center gap-4 flex-shrink-0 text-right">
+                          <div>
+                            <div className="text-base sm:text-lg font-black text-foreground">
+                              {item.score}{" "}
+                              <span className="text-[11px] text-muted-foreground font-normal">
+                                / {item.totalQuestions}
+                              </span>
+                            </div>
+                            <div className="text-[11px] font-bold text-emerald-500">
+                              {item.percentage}
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                    )
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Live Sync Notice */}
-        <div className="p-4 rounded-2xl bg-secondary/50 border border-border/60 text-xs text-muted-foreground flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-            <span>
-              প্রতিযোগিতা চলাকালীন গুগল শিটে নতুন রেসপন্স জমা হওয়ার সাথে সাথে প্রতি ৪৫ সেকেন্ড পর পর এই লিডারবোর্ড স্বয়ংক্রিয়ভাবে রিফ্রেশ হয়।
-            </span>
+        {data.length > 0 && (
+          <div className="p-4 rounded-2xl bg-secondary/50 border border-border/60 text-xs text-muted-foreground flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-amber-500 flex-shrink-0" />
+              <span>
+                গুগল শিটে নতুন কুইজ সাবমিট হওয়ার সাথে সাথে প্রতি ৩০ সেকেন্ড পর পর এই লিডারবোর্ড স্বয়ংক্রিয়ভাবে হালনাগাদ হয়।
+              </span>
+            </div>
+            {lastUpdated && (
+              <span className="text-[11px] font-mono text-muted-foreground">
+                সর্বশেষ আপডেট: {lastUpdated}
+              </span>
+            )}
           </div>
-          {lastUpdated && (
-            <span className="text-[11px] font-mono text-muted-foreground">
-              সর্বশেষ আপডেট: {lastUpdated}
-            </span>
-          )}
-        </div>
+        )}
       </div>
     </section>
   )
