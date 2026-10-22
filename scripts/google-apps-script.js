@@ -114,3 +114,24 @@ function doGet(e) {
     }))
     .setMimeType(ContentService.MimeType.JSON);
 }
+
+/**
+ * টেস্ট ফাংশন: Apps Script এডিটরে এটি রান করে সরাসরি গুগল শিটে ডাটা আসছে কিনা দেখতে পারেন
+ */
+function testSaveData() {
+  const testData = {
+    postData: {
+      contents: JSON.stringify({
+        name: 'রাফসান আহমেদ',
+        roll: '589124',
+        dept: 'CPI - Computer',
+        answers: '{"1":2,"2":0}',
+        score: 28,
+        totalQuestions: 30,
+        submittedAt: new Date().toLocaleString('en-US', { timeZone: 'Asia/Dhaka' })
+      })
+    }
+  };
+  const result = doPost(testData);
+  Logger.log(result.getContent());
+}
