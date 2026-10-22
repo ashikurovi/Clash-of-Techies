@@ -141,14 +141,6 @@ export default function Leaderboard({ userRoll }: LeaderboardProps) {
       <div className="max-w-5xl mx-auto space-y-6 sm:space-y-8 px-1 sm:px-0">
         {/* Header Section */}
         <div className="text-center space-y-2 sm:space-y-3">
-          <div className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1 sm:py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-[10px] min-[360px]:text-xs font-black uppercase tracking-wider shadow-sm max-w-full">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping flex-shrink-0" />
-            <Trophy className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
-            <span className="truncate">গুগল শিট লাইভ লিডারবোর্ড</span>
-            <span className="hidden min-[480px]:inline text-muted-foreground">•</span>
-            <span className="hidden min-[480px]:inline">Live Sheet Rankings</span>
-          </div>
-
           <h2 className="text-2xl min-[360px]:text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-foreground px-2">
             Clash of Techies <span className="text-amber-500">লিডারবোর্ড</span>
           </h2>
