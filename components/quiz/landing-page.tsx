@@ -41,6 +41,7 @@ import {
   REGISTRATION_LOCK_TIME_TODAY,
   REGISTRATION_REOPEN_TIME,
 } from "@/lib/quiz-data"
+import Leaderboard from "@/components/quiz/leaderboard"
 
 interface LandingPageProps {
   onStartQuiz: (name: string, roll: string, dept?: string) => void
@@ -201,9 +202,21 @@ export default function LandingPage({ onStartQuiz, onViewResult }: LandingPagePr
             </div>
           </div>
 
-          <div className="hidden sm:flex items-center gap-2 px-3 py-1 rounded-full bg-secondary/80 border border-border text-xs font-semibold text-muted-foreground">
-            <Zap className="w-3.5 h-3.5 text-amber-500 animate-pulse" />
-            <span>CLASH OF TECHIES 2026</span>
+          <div className="hidden sm:flex items-center gap-2.5">
+            <a
+              href="#leaderboard"
+              className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-xs font-bold text-amber-600 dark:text-amber-400 transition-all shadow-sm"
+            >
+              <Trophy className="w-3.5 h-3.5 text-amber-500" />
+              <span>লাইভ লিডারবোর্ড</span>
+            </a>
+            <a
+              href="#register"
+              className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-xs font-bold text-purple-600 dark:text-purple-400 transition-all shadow-sm"
+            >
+              <Zap className="w-3.5 h-3.5 text-purple-500" />
+              <span>রেজিস্ট্রেশন</span>
+            </a>
           </div>
 
           <div className="flex items-center gap-3">
@@ -606,6 +619,9 @@ export default function LandingPage({ onStartQuiz, onViewResult }: LandingPagePr
               </CardContent>
             </Card>
           </section>
+
+          {/* 🏆 Live Leaderboard Section */}
+          <Leaderboard userRoll={alreadySubmitted?.roll} />
 
           {/* 📝 Registration Form Section */}
           <section id="register" className="pt-4 scroll-mt-20">

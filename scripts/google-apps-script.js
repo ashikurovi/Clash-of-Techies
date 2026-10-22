@@ -27,7 +27,7 @@ function doPost(e) {
     const data = JSON.parse(e.postData.contents);
     const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
     let sheet = spreadsheet.getSheetByName(SHEET_NAME);
-    
+
     // Create sheet and header row if not exists
     if (!sheet) {
       sheet = spreadsheet.insertSheet(SHEET_NAME);
@@ -47,22 +47,22 @@ function doPost(e) {
       sheet.getRange(1, 1, 1, headers.length).setFontColor('#ffffff');
       sheet.setFrozenRows(1);
     }
-    
+
     // Duplicate Check: একজন প্রতিযোগী কেবল একবারই সাবমিট করতে পারবেন
     const lastRow = sheet.getLastRow();
     if (lastRow > 1) {
       // Column 3 (C) contains the participant Roll number
-      const existingRolls = sheet.getRange(2, 3, lastRow - 1, 1).getValues().flat().map(function(r) {
+      const existingRolls = sheet.getRange(2, 3, lastRow - 1, 1).getValues().flat().map(function (r) {
         return String(r).trim().toLowerCase();
       });
       const incomingRoll = String(data.roll || '').trim().toLowerCase();
-      
+
       if (incomingRoll && existingRolls.indexOf(incomingRoll) !== -1) {
         return ContentService
-          .createTextOutput(JSON.stringify({ 
-            success: false, 
-            duplicate: true, 
-            message: 'Duplicate submission rejected: This roll has already submitted.' 
+          .createTextOutput(JSON.stringify({
+            success: false,
+            duplicate: true,
+            message: 'Duplicate submission rejected: This roll has already submitted.'
           }))
           .setMimeType(ContentService.MimeType.JSON);
       }
@@ -70,7 +70,7 @@ function doPost(e) {
 
     // Calculate percentage
     const percentage = ((data.score / data.totalQuestions) * 100).toFixed(1) + '%';
-    
+
     // Prepare row data
     const rowData = [
       data.submittedAt || new Date().toLocaleString('en-US', { timeZone: 'Asia/Dhaka' }),
@@ -82,37 +82,104 @@ function doPost(e) {
       percentage,
       data.answers
     ];
-    
+
     sheet.appendRow(rowData);
-    
+
     return ContentService
-      .createTextOutput(JSON.stringify({ 
-        success: true, 
-        message: 'Clash of Techies response recorded successfully' 
+      .createTextOutput(JSON.stringify({
+        success: true,
+        message: 'Clash of Techies response recorded successfully'
       }))
       .setMimeType(ContentService.MimeType.JSON);
-      
+
   } catch (error) {
     return ContentService
-      .createTextOutput(JSON.stringify({ 
-        success: false, 
-        error: error.toString() 
+      .createTextOutput(JSON.stringify({
+        success: false,
+        error: error.toString()
       }))
       .setMimeType(ContentService.MimeType.JSON);
   }
 }
 
 /**
- * Handles GET requests (for testing browser ping)
+ * Handles GET requests (Live Leaderboard API for Landing Page)
  */
 function doGet(e) {
-  return ContentService
-    .createTextOutput(JSON.stringify({ 
-      status: 'ok',
-      message: 'Clash of Techies 2026 Quiz API is active',
-      timestamp: new Date().toISOString()
-    }))
-    .setMimeType(ContentService.MimeType.JSON);
+  try {
+    const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+    let sheet = spreadsheet.getSheetByName(SHEET_NAME);
+
+    // If sheet doesn't exist yet, return empty list
+    if (!sheet) {
+      return ContentService
+        .createTextOutput(JSON.stringify({
+          status: 'ok',
+          total: 0,
+          leaderboard: []
+        }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    const lastRow = sheet.getLastRow();
+    if (lastRow <= 1) {
+      return ContentService
+        .createTextOutput(JSON.stringify({
+          status: 'ok',
+          total: 0,
+          leaderboard: []
+        }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // Headers: [Timestamp, Name, Roll, Dept, Score, Total Questions, Percentage, Answers]
+    const values = sheet.getRange(2, 1, lastRow - 1, 7).getValues();
+
+    const leaderboard = values.map(function (row, idx) {
+      const rollStr = String(row[2] || '').trim();
+      const maskedRoll = rollStr.length > 3
+        ? rollStr.substring(0, 3) + '***'
+        : rollStr;
+
+      return {
+        id: idx + 1,
+        timestamp: row[0],
+        name: String(row[1] || 'Anonymous Techie').trim(),
+        roll: maskedRoll,
+        rawRoll: rollStr,
+        dept: String(row[3] || 'N/A').trim(),
+        score: Number(row[4]) || 0,
+        totalQuestions: Number(row[5]) || 30,
+        percentage: String(row[6] || '0%').trim()
+      };
+    });
+
+    // Sort by Score descending, then by Timestamp ascending (earlier submissions rank higher)
+    leaderboard.sort(function (a, b) {
+      if (b.score !== a.score) {
+        return b.score - a.score;
+      }
+      return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
+    });
+
+    return ContentService
+      .createTextOutput(JSON.stringify({
+        status: 'ok',
+        updatedAt: new Date().toISOString(),
+        total: leaderboard.length,
+        leaderboard: leaderboard.slice(0, 50) // Top 50 participants
+      }))
+      .setMimeType(ContentService.MimeType.JSON);
+
+  } catch (error) {
+    return ContentService
+      .createTextOutput(JSON.stringify({
+        status: 'error',
+        error: error.toString(),
+        leaderboard: []
+      }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
 }
 
 /**
@@ -135,3 +202,4 @@ function testSaveData() {
   const result = doPost(testData);
   Logger.log(result.getContent());
 }
+

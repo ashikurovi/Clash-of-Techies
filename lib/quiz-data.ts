@@ -416,3 +416,69 @@ export const questions: Question[] = [
     a: 0,
   },
 ]
+
+export interface LeaderboardEntry {
+  id: number | string
+  rank?: number
+  name: string
+  roll: string
+  rawRoll?: string
+  dept: string
+  score: number
+  totalQuestions: number
+  percentage: string
+  timestamp: string
+}
+
+export const INITIAL_LEADERBOARD: LeaderboardEntry[] = [
+  {
+    id: "demo-1",
+    name: "তানভীর হাসান",
+    roll: "589***",
+    dept: "CPI - Computer",
+    score: 29,
+    totalQuestions: 30,
+    percentage: "96.7%",
+    timestamp: "2026-10-22T12:30:00+06:00",
+  },
+  {
+    id: "demo-2",
+    name: "সাদিয়া আফরিন",
+    roll: "612***",
+    dept: "DPI - CST",
+    score: 28,
+    totalQuestions: 30,
+    percentage: "93.3%",
+    timestamp: "2026-10-22T13:10:00+06:00",
+  },
+  {
+    id: "demo-3",
+    name: "মেহেদী হাসান",
+    roll: "492***",
+    dept: "CPI - CMT",
+    score: 27,
+    totalQuestions: 30,
+    percentage: "90.0%",
+    timestamp: "2026-10-22T13:45:00+06:00",
+  },
+  {
+    id: "demo-4",
+    name: "নাজমুল হোসেন",
+    roll: "543***",
+    dept: "FPI - Computer",
+    score: 26,
+    totalQuestions: 30,
+    percentage: "86.7%",
+    timestamp: "2026-10-22T14:02:00+06:00",
+  },
+  {
+    id: "demo-5",
+    name: "ফারহানা ইয়াসমিন",
+    roll: "630***",
+    dept: "CPI - Electronics",
+    score: 25,
+    totalQuestions: 30,
+    percentage: "83.3%",
+    timestamp: "2026-10-22T14:15:00+06:00",
+  },
+]
