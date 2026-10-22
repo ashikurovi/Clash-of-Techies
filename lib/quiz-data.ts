@@ -49,7 +49,7 @@ export const QUIZ_CONFIG = {
   totalQuestions: 30,
   durationMinutes: 20,
   durationSeconds: 20 * 60,
-  googleScriptUrl: "https://script.google.com/macros/s/AKfycbzRtQ7fGdNVU8iR-ZhG1NFwTpSlXjz8w-z6cl4xPXEaLRRmWxvjBIB5z4BDUHFaNRCaqQ/exec",
+  googleScriptUrl: "https://script.google.com/macros/s/AKfycbxMa4iz94uglI2tIE3Ga44IBvzyenAJt2uCwYYgzlZXWAFxTTg0tchhuq8dGj9kglyKnw/exec",
 }
 
 export const TOPICS_DATA: TopicInfo[] = [

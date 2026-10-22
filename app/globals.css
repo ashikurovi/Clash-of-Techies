@@ -81,8 +81,24 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
   body {
     @apply bg-background text-foreground;
+    overflow-x: hidden;
+    -webkit-tap-highlight-color: transparent;
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    text-wrap: balance;
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+  p, label {
+    overflow-wrap: break-word;
   }
 }
 
@@ -106,4 +122,20 @@
   background: linear-gradient(135deg, #7c3aed 0%, #a855f7 35%, #f59e0b 80%, #fbbf24 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+}
+
+/* Fluid responsive typography utilities */
+.text-responsive-h1 {
+  font-size: clamp(1.85rem, 5.5vw + 0.5rem, 4.25rem);
+  line-height: 1.12;
+}
+
+.text-responsive-h2 {
+  font-size: clamp(1.4rem, 3.5vw + 0.5rem, 2.75rem);
+  line-height: 1.2;
+}
+
+.text-responsive-h3 {
+  font-size: clamp(1.15rem, 2.5vw + 0.3rem, 1.75rem);
+  line-height: 1.25;
 }
