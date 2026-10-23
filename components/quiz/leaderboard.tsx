@@ -102,30 +102,61 @@ export default function Leaderboard({ userRoll }: LeaderboardProps) {
     return () => clearInterval(interval)
   }, [])
 
+  // Helper to parse numeric percentage
+  const getNumericPercentage = (item: LeaderboardEntry) => {
+    if (typeof item.percentage === "number") return item.percentage
+    if (typeof item.percentage === "string") {
+      const parsed = parseFloat(item.percentage.replace("%", "").trim())
+      if (!isNaN(parsed)) return parsed
+    }
+    const total = item.totalQuestions || QUIZ_CONFIG.totalQuestions
+    return total > 0 ? (item.score / total) * 100 : 0
+  }
+
+  // Sorted leaderboard based on Score + Percentage
+  const sortedData = useMemo(() => {
+    return [...data].sort((a, b) => {
+      // 1. Primary: Score (Descending)
+      if (b.score !== a.score) {
+        return b.score - a.score
+      }
+      // 2. Secondary: Percentage (Descending)
+      const bPerc = getNumericPercentage(b)
+      const aPerc = getNumericPercentage(a)
+      if (bPerc !== aPerc) {
+        return bPerc - aPerc
+      }
+      // 3. Tertiary: Timestamp (Ascending)
+      const timeA = a.timestamp ? new Date(a.timestamp).getTime() : 0
+      const timeB = b.timestamp ? new Date(b.timestamp).getTime() : 0
+      return timeA - timeB
+    })
+  }, [data])
+
   // Filtered leaderboard
   const filteredData = useMemo(() => {
-    if (!search.trim()) return data
+    if (!search.trim()) return sortedData
     const query = search.toLowerCase().trim()
-    return data.filter(
+    return sortedData.filter(
       (item) =>
         item.name.toLowerCase().includes(query) ||
         item.roll.toLowerCase().includes(query) ||
         (item.rawRoll && item.rawRoll.toLowerCase().includes(query)) ||
         item.dept.toLowerCase().includes(query)
     )
-  }, [data, search])
+  }, [sortedData, search])
 
   // Top 3 Podium
-  const top1 = data[0]
-  const top2 = data[1]
-  const top3 = data[2]
+  const top1 = sortedData[0]
+  const top2 = sortedData[1]
+  const top3 = sortedData[2]
   const others = filteredData.slice(search.trim() ? 0 : 3)
 
   // Find user's rank
   const myRank = useMemo(() => {
     if (!mySubmission) return null
     const targetRoll = mySubmission.roll.trim().toLowerCase()
-    const index = data.findIndex(
+    const index = sortedData.findIndex(
       (item) =>
         (item.rawRoll && item.rawRoll.toLowerCase() === targetRoll) ||
         item.roll.toLowerCase() === targetRoll
@@ -134,7 +165,7 @@ export default function Leaderboard({ userRoll }: LeaderboardProps) {
       return index + 1
     }
     return null
-  }, [data, mySubmission])
+  }, [sortedData, mySubmission])
 
   return (
     <section id="leaderboard" className="py-8 sm:py-12 scroll-mt-16 sm:scroll-mt-20">
@@ -214,9 +245,12 @@ export default function Leaderboard({ userRoll }: LeaderboardProps) {
 
             <div className="flex items-center justify-between w-full min-[480px]:w-auto min-[480px]:justify-end gap-3 pt-2 min-[480px]:pt-0 border-t min-[480px]:border-t-0 border-purple-500/20">
               <div className="text-left min-[480px]:text-right">
-                <div className="text-[10px] sm:text-[11px] text-muted-foreground font-medium">প্রাপ্ত স্কোর</div>
+                <div className="text-[10px] sm:text-[11px] text-muted-foreground font-medium">প্রাপ্ত স্কোর ও সঠিকতা</div>
                 <div className="text-base sm:text-lg font-black text-amber-500">
                   {mySubmission.score} / {QUIZ_CONFIG.totalQuestions}
+                </div>
+                <div className="text-[10px] min-[360px]:text-[11px] font-bold text-emerald-500">
+                  {((mySubmission.score / QUIZ_CONFIG.totalQuestions) * 100).toFixed(1)}% সঠিকতা
                 </div>
               </div>
               {myRank && myRank <= 3 && (
@@ -462,7 +496,7 @@ export default function Leaderboard({ userRoll }: LeaderboardProps) {
                 <div className="divide-y divide-border/60">
                   {others.map((item, idx) => {
                     const rank = search.trim()
-                      ? data.findIndex((d) => d.id === item.id) + 1
+                      ? sortedData.findIndex((d) => d.id === item.id) + 1
                       : idx + 4
 
                     const isCurrentUser =

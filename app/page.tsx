@@ -143,6 +143,7 @@ export default function QuizApp() {
           score={sc}
           totalQuestions={questions.length}
           answers={ans}
+          onBackToHome={() => setSt("landing")}
         />
       )}
     </main>

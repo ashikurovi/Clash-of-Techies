@@ -154,12 +154,34 @@ function doGet(e) {
       };
     });
 
-    // Sort by Score descending, then by Timestamp ascending (earlier submissions rank higher)
+    // Helper: Parse numeric percentage value
+    function getNumericPercentage(percStr, scoreVal, totalVal) {
+      if (typeof percStr === 'number' && !isNaN(percStr)) return percStr;
+      if (typeof percStr === 'string') {
+        const cleaned = parseFloat(percStr.replace('%', '').trim());
+        if (!isNaN(cleaned)) return cleaned;
+      }
+      const s = Number(scoreVal) || 0;
+      const t = Number(totalVal) || 0;
+      return t > 0 ? (s / t) * 100 : 0;
+    }
+
+    // Leaderboard Ranking Calculation: Based on Score + Percentage
+    // 1. Primary: Score descending (সর্বোচ্চ স্কোর)
+    // 2. Secondary: Percentage descending (স্কোর সমান হলে সর্বোচ্চ পার্সেন্টেজ/সঠিকতা)
+    // 3. Tertiary: Timestamp ascending (স্কোর ও পার্সেন্টেজ উভয়ই সমান হলে আগে সাবমিটকারী)
     leaderboard.sort(function (a, b) {
       if (b.score !== a.score) {
         return b.score - a.score;
       }
-      return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
+      const bPerc = getNumericPercentage(b.percentage, b.score, b.totalQuestions);
+      const aPerc = getNumericPercentage(a.percentage, a.score, a.totalQuestions);
+      if (bPerc !== aPerc) {
+        return bPerc - aPerc;
+      }
+      const timeA = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+      const timeB = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+      return timeA - timeB;
     });
 
     return ContentService

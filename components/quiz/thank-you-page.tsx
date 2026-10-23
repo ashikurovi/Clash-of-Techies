@@ -17,12 +17,14 @@ import {
   Flame,
 } from "lucide-react"
 import { UserData, QUIZ_CONFIG } from "@/lib/quiz-data"
+import Leaderboard from "@/components/quiz/leaderboard"
 
 interface ThankYouPageProps {
   userData: UserData
   score: number
   totalQuestions: number
   answers: Record<number, number>
+  onBackToHome?: () => void
 }
 
 export default function ThankYouPage({
@@ -30,6 +32,7 @@ export default function ThankYouPage({
   score,
   totalQuestions,
   answers,
+  onBackToHome,
 }: ThankYouPageProps) {
   const percentage = Math.round((score / totalQuestions) * 100)
 
@@ -86,15 +89,51 @@ export default function ThankYouPage({
   }, [userData, score, totalQuestions, answers])
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4 py-8 md:py-12 relative overflow-hidden tech-grid-pattern selection:bg-purple-500 selection:text-white">
+    <div className="min-h-screen bg-background py-8 md:py-12 px-3 sm:px-4 relative overflow-hidden tech-grid-pattern selection:bg-purple-500 selection:text-white">
       {/* Background Glows */}
       <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-600/15 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-amber-500/15 rounded-full blur-3xl pointer-events-none" />
 
-      <Card className="max-w-2xl w-full border-2 border-purple-500/30 shadow-2xl relative z-10 bg-card/95 overflow-hidden glow-purple">
-        <div className="h-2 bg-gradient-to-r from-purple-600 via-amber-500 to-red-500" />
+      <div className="max-w-5xl mx-auto space-y-8 sm:space-y-10 relative z-10">
+        {/* Top Navigation & Jump Bar */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3.5 sm:p-4 rounded-2xl bg-card/80 border border-border shadow-sm backdrop-blur-sm">
+          <div className="flex items-center gap-2.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping flex-shrink-0" />
+            <div className="text-xs sm:text-sm font-bold text-foreground">
+              কুইজ সম্পন্ন হয়েছে • লাইভ ফলাফল ও লিডারবোর্ড
+            </div>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap justify-center">
+            <a
+              href="#my-result"
+              className="text-xs font-bold px-3 py-1.5 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-600 dark:text-purple-400 border border-purple-500/30 transition-all shadow-sm"
+            >
+              📊 আপনার স্কোর ও ফলাফল ({score}/{totalQuestions})
+            </a>
+            {onBackToHome && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onBackToHome}
+                className="text-xs font-bold rounded-xl h-8"
+              >
+                🏠 হোম পেইজ
+              </Button>
+            )}
+          </div>
+        </div>
 
-        <CardHeader className="text-center pb-3 pt-8">
+        {/* 🏆 1. Live Leaderboard (Top) */}
+        <div>
+          <Leaderboard userRoll={userData.r} />
+        </div>
+
+        {/* 📊 2. User Result & Score + Percentage Showcase Card (Below Leaderboard) */}
+        <div id="my-result" className="scroll-mt-20">
+          <Card className="max-w-2xl mx-auto border-2 border-purple-500/30 shadow-2xl relative bg-card/95 overflow-hidden glow-purple">
+            <div className="h-2 bg-gradient-to-r from-purple-600 via-amber-500 to-red-500" />
+
+            <CardHeader className="text-center pb-3 pt-8">
           {/* Success Check Icon */}
           <div className="relative mx-auto mb-4">
             <div className="w-20 h-20 rounded-3xl bg-gradient-to-tr from-purple-600 via-violet-600 to-amber-500 flex items-center justify-center shadow-lg text-white mx-auto">
@@ -252,6 +291,8 @@ export default function ThankYouPage({
           </div>
         </CardContent>
       </Card>
+        </div>
+      </div>
     </div>
   )
 }

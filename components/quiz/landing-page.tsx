@@ -159,7 +159,7 @@ export default function LandingPage({ onStartQuiz, onViewResult }: LandingPagePr
     return () => clearInterval(timer)
   }, [])
 
-  const isFormUnlocked = scheduleState.isFormOpen || devOverride
+  const isFormUnlocked = ((scheduleState.isFormOpen || devOverride) && new Date().getHours() < 22)
   const isFormValid = name.trim() !== "" && roll.trim() !== "" && isFormUnlocked
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -733,9 +733,12 @@ export default function LandingPage({ onStartQuiz, onViewResult }: LandingPagePr
                         <strong className="text-foreground text-xs sm:text-sm font-bold block">{alreadySubmitted.roll}</strong>
                       </div>
                       <div className="min-[420px]:col-span-2 sm:col-span-1">
-                        <span className="text-muted-foreground block text-[10px] sm:text-[11px]">প্রাপ্ত স্কোর:</span>
+                        <span className="text-muted-foreground block text-[10px] sm:text-[11px]">প্রাপ্ত স্কোর ও সঠিকতা:</span>
                         <strong className="text-purple-600 dark:text-purple-400 text-xs sm:text-sm font-black block">
-                          {alreadySubmitted.score} / {QUIZ_CONFIG.totalQuestions}
+                          {alreadySubmitted.score} / {QUIZ_CONFIG.totalQuestions}{" "}
+                          <span className="text-emerald-500 font-bold">
+                            ({Math.round((alreadySubmitted.score / QUIZ_CONFIG.totalQuestions) * 100)}%)
+                          </span>
                         </strong>
                       </div>
                     </div>
