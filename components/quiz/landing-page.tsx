@@ -159,7 +159,7 @@ export default function LandingPage({ onStartQuiz, onViewResult }: LandingPagePr
     return () => clearInterval(timer)
   }, [])
 
-  const isFormUnlocked = ((scheduleState.isFormOpen || devOverride) && new Date().getHours() < 22)
+  const isFormUnlocked = false
   const isFormValid = name.trim() !== "" && roll.trim() !== "" && isFormUnlocked
 
   const handleSubmit = (e: React.FormEvent) => {
